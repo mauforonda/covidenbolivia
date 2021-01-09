@@ -122,5 +122,8 @@ if __name__ == '__main__':
         figsize=(120 / 2.54, 120 / 2.54)
     )
 
+    if not os.path.exists('plots'):
+        os.makedirs('plots')
+
     ax.get_figure().savefig('plots/municipios_heatmap.jpg', bbox_inches='tight')
     print(str(fdata.columns[-1])[:10])
