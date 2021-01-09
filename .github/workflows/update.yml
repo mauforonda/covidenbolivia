@@ -1,7 +1,7 @@
 name: Actualizar municipios_heatmap
 on:
   schedule:
-    - cron: '0 19-23 * * *'
+    - cron: '0-59/15 19-23 * * *'
 jobs:
   update:
     name: update
@@ -41,7 +41,7 @@ jobs:
           CONSUMER_SECRET: ${{ secrets.CONSUMER_SECRET }}
           ACCESS_TOKEN_KEY: ${{ secrets.ACCESS_TOKEN_KEY }}
           ACCESS_TOKEN_SECRET: ${{ secrets.ACCESS_TOKEN_SECRET }}
-          DATE: ${{ steps.update-script.outputs }}
+          DATE: ${{ steps.update-script.outputs.result }}
         run: |
           python scripts/tweet/tweet.py $CONSUMER_KEY $CONSUMER_SECRET $ACCESS_TOKEN_KEY $ACCESS_TOKEN_SECRET "Casos activos de Covid-19 en Bolivia por municipio al $DATE" "plots/municipios_heatmap.jpg"
       - name: commit
