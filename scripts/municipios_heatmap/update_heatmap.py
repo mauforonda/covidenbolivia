@@ -93,7 +93,7 @@ def load_data():
 
 
 if __name__ == '__main__':
-    muni = pd.read_csv('./scripts/municipios_heatmap/sdsn.gen.csv')
+    muni = pd.read_csv('scripts/municipios_heatmap/sdsn.gen.csv')
     muni = muni.set_index('cod_ine')
 
     cmun = muni[['municipio']]
@@ -122,5 +122,5 @@ if __name__ == '__main__':
         figsize=(120 / 2.54, 120 / 2.54)
     )
 
-    ax.get_figure().savefig('./plots/municipios_heatmap.jpg', bbox_inches='tight')
+    ax.get_figure().savefig('plots/municipios_heatmap.jpg', bbox_inches='tight')
     print(str(fdata.columns[-1])[:10])
