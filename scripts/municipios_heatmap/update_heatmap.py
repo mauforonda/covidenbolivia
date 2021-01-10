@@ -26,7 +26,7 @@ def draw(fdata, pdata):
     locale.setlocale(locale.LC_TIME, "es_US.UTF8")
     rcParams['font.family'] = 'Quicksand'
 
-    f = plt.figure(figsize=(40,50))
+    f = plt.figure(figsize=(40,50), facecolor='#f9f9f9')
     plt.subplots_adjust(wspace=0.04)
     gs = f.add_gridspec(1, 6)
     heat_ax = f.add_subplot(gs[:, :-1])
@@ -56,6 +56,7 @@ def draw(fdata, pdata):
     bar_ax.xaxis.set_major_locator(ticker.MaxNLocator(3))
     bar_ax.set_xlabel('Casos acumulados\npor 100 Mil habitantes', fontdict={'size':30, 'family':'Charter'}, color=color_text, labelpad=40, loc='left')
     bar_ax.xaxis.set_label_position('top')
+    bar_ax.set_ylabel('')
 
     for ax in [heat_ax, bar_ax]:
         ax.set_frame_on(False)
