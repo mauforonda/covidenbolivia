@@ -10,68 +10,57 @@ import pandas as pd
 import seaborn as sns
 import numpy as np
 
-from matplotlib import pyplot
+import matplotlib.pyplot as plt
+from matplotlib import ticker, dates, rcParams
 from matplotlib.colors import LogNorm, PowerNorm
+import locale
 
 np.warnings.filterwarnings('ignore')
 
 
-def draw(X, Xf, title=None, title_secondary=None, norm=None, figsize=None, **kwargs):
-    if norm is None:
-        norm = PowerNorm(gamma=.2)
+def draw(fdata, pdata):
+    
+    ddata = (fdata.T / fdata.max(axis=1)).T.copy()
 
-    if figsize is None:
-        figsize=(30 / 2.54, 30 / 2.54)
+    color_text = '#9b9ba3'
+    locale.setlocale(locale.LC_TIME, "es_US.UTF8")
+    rcParams['font.family'] = 'Quicksand'
 
-    fig = pyplot.figure(figsize=figsize, facecolor='white')
-    gs = fig.add_gridspec(len(X), 10)
+    f = plt.figure(figsize=(40,50))
+    plt.subplots_adjust(wspace=0.04)
+    gs = f.add_gridspec(1, 6)
+    heat_ax = f.add_subplot(gs[:, :-1])
+    bar_ax = f.add_subplot(gs[:, -1])
 
-    Xs = (X.T / X.max(axis=1)).T.copy()
+    datelist = dates.date2num(ddata.columns.to_pydatetime())
+    im = heat_ax.imshow(ddata, cmap='Spectral_r', aspect='auto', extent=[datelist[0], datelist[-1], len(ddata), 0], alpha=.8)
+    heat_ax.yaxis.set_major_locator(ticker.FixedLocator([i + 0.5 for i in list(range(0,len(ddata)))]))
+    heat_ax.yaxis.set_minor_locator(ticker.IndexLocator(1,0))
+    heat_ax.set_yticklabels(ddata.index.tolist())
+    heat_ax.xaxis.set_major_locator(dates.AutoDateLocator())
+    heat_ax.xaxis.set_major_formatter(dates.DateFormatter('%B'))
+    heat_ax.grid(axis='x', which='major', alpha=.8, color='white', linewidth=4, linestyle='-')
+    heat_ax.grid(axis='y', which='minor', alpha=.1, color='white', linewidth=1, linestyle='-')
+    heat_ax.tick_params(which='both', axis='both', labelcolor=color_text, labeltop=True, pad=12, rotation=0, width=0, length=0)
+    heat_ax.tick_params(axis='x', labelsize=20)
+    heat_ax.tick_params(axis='y', labelsize=15)
+    heat_ax.set_ylabel('Municipios', fontdict={'size':100, 'family':'Charter'}, color=color_text, labelpad=35)
+    heat_ax.annotate(text='Casos Activos Diarios', xy=(.5,0.94), xycoords='figure fraction', ha='center', va='bottom', color=color_text, fontsize=120, fontfamily='Charter')
+    heat_ax.annotate(text='como proporción del valor máximo por municipio', xy=(.5,0.935), xycoords='figure fraction', ha='center', va='top', color=color_text, fontsize=50, fontfamily='Charter')
+    heat_ax.annotate(text='El número de casos activos en un día corresponde al número de casos que han sido confirmados en los últimos 14 días.\nEn base a datos producidos por el Ministerio de Desarrollo Productivo y Economía Plural y almacenados en https://github.com/mauforonda/covid19bolivia-municipal', xy=(.5,0.040), xycoords='figure fraction', ha='center', va='bottom', color=color_text, fontsize=25, fontfamily='Charter', linespacing=1.6)
+    
+    pdata[::-1].plot(kind='barh', ax=bar_ax, color='#8f5383', alpha=.7, width=0.9)
+    bar_ax.set_yticks([])
+    bar_ax.tick_params(axis='x', labeltop=True, labelcolor=color_text, labelsize=20, pad=12, rotation=0, width=0, length=0)
+    bar_ax.grid('x', 'major', alpha=.3, color=color_text, linewidth=2, linestyle='-')
+    bar_ax.xaxis.set_major_locator(ticker.MaxNLocator(3))
+    bar_ax.set_xlabel('Casos acumulados\npor 100 Mil habitantes', fontdict={'size':30, 'family':'Charter'}, color=color_text, labelpad=40, loc='left')
+    bar_ax.xaxis.set_label_position('top')
 
-    main_ax = fig.add_subplot(gs[0:, :-1])
-    im = sns.heatmap(
-        Xs,
-        cmap='Spectral_r', cbar=False, alpha=.85,
-        norm=norm, vmax=Xs.max().max(), ax=main_ax
-    )
-    main_ax.set_yticks(np.arange(Xs.shape[0]) + .5,)
-    main_ax.set_yticklabels(Xs.index, va='center', fontsize=12)
-
-    xticks = main_ax.get_xticks()
-    xticks = np.arange(0.5, xticks[-1], 30)
-    main_ax.set_xticks(xticks)
-
-    main_ax.set_xticklabels([
-        column.date() for column in Xs.iloc[:, xticks].columns
-    ], rotation=0, fontsize=14)
-
-    main_ax.set_title(title, fontsize=32)
-    Xf = Xf.iloc[::-1]
-
-    for idx in range(len(X)):
-        row = Xf.iloc[idx:idx + 1]
-
-        ax = fig.add_subplot(gs[idx, -1])
-        ax = row.plot.barh(ax=ax)
-
-        ax.set_xlim((0, Xf.max()))
-        ax.axis('off')
-
-        if idx == 0 and title_secondary is not None:
-            ax.set_title(title_secondary)
-
-    ax.axis('on')
-    ax.tick_params(
-        axis='y',
-        labelleft=False,
-        left=False
-    )
-    ax.set_ylabel('')
-
-    for frame_border in ['top', 'right', 'left']:
-        ax.spines[frame_border].set_visible(False)
-
-    return main_ax
+    for ax in [heat_ax, bar_ax]:
+        ax.set_frame_on(False)
+    plt.savefig('plots/municipios_heatmap.jpg', bbox_inches='tight', dpi=100, pad_inches=0.8)
+    plt.close()
 
 
 def load_data():
@@ -113,17 +102,6 @@ if __name__ == '__main__':
 
     fdata.index = [_ for _ in itertools.chain(*cmun.loc[fdata.index].to_numpy())]
 
-    ax = draw(
-        fdata,
-        pdata[::-1],
-        title='Casos activos por municipio ({})'.format(str(fdata.columns[-1])[:10]),
-        title_secondary='Casos / 100k hab.',
-        norm=PowerNorm(.66),
-        figsize=(120 / 2.54, 120 / 2.54)
-    )
+    draw(fdata, pdata)
 
-    if not os.path.exists('plots'):
-        os.makedirs('plots')
-
-    ax.get_figure().savefig('plots/municipios_heatmap.jpg', bbox_inches='tight')
-    print(str(fdata.columns[-1])[:10])
+    print(fdata.columns[-1].strftime("%d de %B de %Y"))

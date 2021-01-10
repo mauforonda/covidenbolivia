@@ -1,0 +1,60 @@
+name: Actualizar municipios_heatmap
+on:
+  schedule:
+    - cron: '0 16 * * 3'
+jobs:
+  update:
+    name: update
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@master
+      - name: python
+        uses: actions/setup-python@v1
+        with:
+          python-version: '3.6'
+      - name: configurar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r scripts/municipios_heatmap/requirements.txt
+          pip install -r scripts/tweet/requirements.txt
+          unzip scrips/common/quicksand.zip -d /usr/share/fonts/
+          unzip scrips/common/charter.zip -d /usr/share/fonts/
+          fc-cache -f -v
+          sudo locale-gen es_US.UTF8
+          sudo update-locale LANG=es_US.UTF8
+      - name: descargar datos
+        run: |
+          wget -i scripts/municipios_heatmap/datasources -P scripts/municipios_heatmap/data/
+      - name: run update script
+        id: update-script
+        run: |
+          echo ::set-output name=result::$(python scripts/municipios_heatmap/update_heatmap.py)
+      - name: clean
+        run: |
+          rm scripts/municipios_heatmap/data/*
+      - name: git status
+        id: git-status
+        run: |
+          git config --global user.email "covid19-bot@example.com"
+          git config --global user.name "covid19-bot"
+          echo ::set-output name=result::$(git status | tr -d "\n" | grep -c "nothing to commit")
+      - name: tweet
+        id: tweet
+        env:
+          CONSUMER_KEY: ${{ secrets.CONSUMER_KEY }}
+          CONSUMER_SECRET: ${{ secrets.CONSUMER_SECRET }}
+          ACCESS_TOKEN_KEY: ${{ secrets.ACCESS_TOKEN_KEY }}
+          ACCESS_TOKEN_SECRET: ${{ secrets.ACCESS_TOKEN_SECRET }}
+          DATE: ${{ steps.update-script.outputs.result }}
+        run: |
+          python scripts/tweet/tweet.py $CONSUMER_KEY $CONSUMER_SECRET $ACCESS_TOKEN_KEY $ACCESS_TOKEN_SECRET "Casos activos diarios de covid-19 en Bolivia como proporción del valor máximo por municipio. Actualizado hasta el $DATE. Datos abiertos en https://github.com/mauforonda/covid19bolivia-municipal" "plots/municipios_heatmap.jpg"
+      - name: commit
+        if: steps.git-status.outputs.result == 0
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          DATE: ${{ steps.update-script.outputs.result }}
+        run: |
+          git add -A
+          git commit -m "[ci] municipios_heatmap al $DATE"
+          git push -q "https://$GH_TOKEN@github.com/mauforonda/covidenbolivia.git" master
